@@ -1,0 +1,22 @@
+{
+    "name": "vladflonta/magento2-webapi-log",
+    "description": "Logger for webapi REST requests.",
+    "authors":[{
+        "name": "Vlad Flonta",
+        "homepage": "https://github.com/vladflonta"
+    }],
+    "require": {
+        "magento/module-webapi": ">=100.0.2"
+    },
+    "type": "magento2-module",
+    "version": "0.0.1",
+    "license": "OSL-3.0",
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "VladFlonta\\WebApiLog\\": ""
+        }
+    }
+}
