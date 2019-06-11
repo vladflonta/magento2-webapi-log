@@ -8,6 +8,11 @@
 
 namespace VladFlonta\WebApiLog\Logger\Handler;
 
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\Filesystem\DriverInterface;
+use Magento\Store\Model\StoreManagerInterface;
+use VladFlonta\WebApiLog\Logger\Php2Curl;
+
 class Debug extends \Magento\Framework\Logger\Handler\Debug
 {
     /** @var string */
@@ -16,12 +21,29 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
     /** @var boolean */
     private $dirCreated;
 
+    /** @var ScopeConfigInterface */
+    private $scopeConfig;
+
+    public function __construct(
+        DriverInterface $filesystem,
+        ScopeConfigInterface $scopeConfig,
+        $filePath = null,
+        $fileName = null
+    ) {
+        parent::__construct($filesystem, $filePath, $fileName);
+        $this->scopeConfig  = $scopeConfig;
+    }
+
     /**
      * @param array $record
      * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function write(array $record)
     {
+        if (!$this->isEnabled()) {
+            return;
+        }
+
         if (!isset($record['context']['is_api']) || !$record['context']['is_api']) {
             parent::write($record);
             return;
@@ -88,6 +110,81 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
             fclose($stream);
         }
         $stream = null;
+
+        $this->writeCurl($record);
+    }
+
+    /**
+     * Check whether the extension is enabled/disabled
+     *
+     * @return bool
+     */
+    private function isEnabled()
+    {
+        return (bool) $this->scopeConfig->getValue('webapi/log_api_calls/is_logging_enable');
+    }
+
+    /**
+     * Write curl requests
+     *
+     * @param array $record
+     * @return void
+     */
+    private function writeCurl(array $record)
+    {
+        $filePath = sprintf('%s/var/log/webapi_rest/curl.sh', BP);
+
+        $file = fopen($filePath, 'a');
+        fwrite($file, $this->curlData($record));
+    }
+
+    /**
+     * Prepare curl data
+     *
+     * @param array $record
+     * @return string
+     */
+    private function curlData(array $record)
+    {
+        $string = sprintf(
+            '# time: %s%s',
+            $record['datetime']->format('Ymd_His.u'),
+            PHP_EOL
+        );
+
+        $customServer  = $this->customServer();
+        $customHeaders = $this->customHeaders();
+
+        $string .= (new Php2Curl(null, null, null, $customServer, $customHeaders))->doAll();
+        $string .= PHP_EOL . PHP_EOL . PHP_EOL;
+
+        return $string;
+    }
+
+    /**
+     * @return array
+     */
+    private function customServer()
+    {
+        $customServer = $_SERVER;
+
+        $customServer['SERVER_NAME'] = '$BASEURL';
+
+        return $customServer;
+    }
+
+    /**
+     * @return array
+     */
+    private function customHeaders()
+    {
+        $customHeaders = getallheaders();
+
+        if (isset($customHeaders['Authorization'])) {
+            $customHeader['Authorization'] = 'Bearer $B';
+        }
+
+        return $customHeaders;
     }
 
     /**

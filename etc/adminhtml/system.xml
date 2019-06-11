@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="webapi">
+            <group id="log_api_calls" translate="label" type="text" sortOrder="350" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Log API calls</label>
+                <field id="is_logging_enable" translate="label comment" type="select" sortOrder="1" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>If enabled, all API calls will be logged on /var/log/webapi_rest</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
