@@ -38,7 +38,7 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
      * @param array $record
      * @throws \Magento\Framework\Exception\LocalizedException
      */
-    public function write(array $record)
+    public function write(array $record): void
     {
         if (!$this->isEnabled()) {
             return;
