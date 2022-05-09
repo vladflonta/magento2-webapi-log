@@ -20,7 +20,7 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
      * @param array $record
      * @throws \Magento\Framework\Exception\LocalizedException
      */
-    public function write(array $record)
+    protected function write(array $record): void
     {
         if (!isset($record['context']['is_api']) || !$record['context']['is_api']) {
             parent::write($record);
