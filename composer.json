@@ -6,6 +6,7 @@
         "homepage": "https://github.com/vladflonta"
     }],
     "require": {
+        "magento/framework": "^103.0.4",
         "magento/module-webapi": ">=100.0.2"
     },
     "type": "magento2-module",
