@@ -13,8 +13,28 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
     /** @var string */
     private $errorMessage;
 
-    /** @var boolean */
-    private $dirCreated;
+    /** @var string */
+    protected $fileName = '';
+
+    /**
+     * @param \VladFlonta\WebApiLog\Model\Config $config
+     * @param \Magento\Framework\Filesystem\DriverInterface $filesystem
+     * @param \Magento\Framework\Filesystem $fileSystem
+     * @param string $filePath
+     * @param string $fileName
+     */
+    public function __construct(
+        \VladFlonta\WebApiLog\Model\Config $config,
+        \Magento\Framework\Filesystem\DriverInterface $filesystem,
+        \Magento\Framework\Filesystem $fileSystem,
+        $filePath = null,
+        $fileName = null
+    ) {
+        $filePath = $fileSystem
+                ->getDirectoryRead(\Magento\Framework\App\Filesystem\DirectoryList::LOG)
+                ->getAbsolutePath() . $config->getSavePath();
+        parent::__construct($filesystem, $filePath, '');
+    }
 
     /**
      * @param array $record
@@ -28,38 +48,33 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
         }
         $result = preg_match('/\/V1\/([^?]*)/', $record['context']['request']['uri'], $matches);
         $url = sprintf(
-            '%s/var/log/webapi_%s/%s/%s.log',
-            BP,
-            'rest',
+            '%s/%s/%s.%x.log',
+            $this->url,
             $result && count($matches) && $matches[1] ? trim($matches[1], '/') : 'default',
-            $record['datetime']->format('Ymd_His')
+            $record['datetime']->format('Ymd_His'),
+            crc32(serialize($record['context']))
         );
+
+        if (!$url) {
+            throw new \LogicException('Missing stream url, the stream can not be opened.');
+        }
 
         $logDir = $this->filesystem->getParentDirectory($url);
         if (!$this->filesystem->isDirectory($logDir)) {
             $this->filesystem->createDirectory($logDir);
         }
 
-        $stream = null;
-
+        $this->errorMessage = null;
+        set_error_handler(array($this, 'customErrorHandler'));
+        $stream = fopen($url, 'a');
+        if ($this->filePermission !== null) {
+            @chmod($url, $this->filePermission);
+        }
+        restore_error_handler();
         if (!is_resource($stream)) {
-            if (!$url) {
-                throw new \LogicException('Missing stream url, the stream can not be opened.');
-            }
-            $this->createDir($url);
-            $this->errorMessage = null;
-            set_error_handler(array($this, 'customErrorHandler'));
-            $stream = fopen($url, 'a');
-            if ($this->filePermission !== null) {
-                @chmod($url, $this->filePermission);
-            }
-            restore_error_handler();
-            if (!is_resource($stream)) {
-                $stream = null;
-                throw new \Magento\Framework\Exception\LocalizedException(
-                    __('The stream or file "%1" could not be opened: %2', $url, $this->errorMessage)
-                );
-            }
+            throw new \Magento\Framework\Exception\LocalizedException(
+                __('The stream or file "%1" could not be opened: %2', $url, $this->errorMessage)
+            );
         }
 
         if ($this->useLocking) {
@@ -67,8 +82,7 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
         }
 
         $request = $record['context']['request'];
-        $data = '';
-        $data .= sprintf("%s %s HTTP %s\n\n", $request['method'], $request['uri'], $request['version']);
+        $data = sprintf("%s %s HTTP %s\n\n", $request['method'], $request['uri'], $request['version']);
         foreach ($record['context']['request']['headers'] as $key => $value) {
             $data .= sprintf("%s: %s\n", $key, $value);
         }
@@ -87,7 +101,6 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
         if (is_resource($stream)) {
             fclose($stream);
         }
-        $stream = null;
     }
 
     /**
@@ -97,49 +110,5 @@ class Debug extends \Magento\Framework\Logger\Handler\Debug
     private function customErrorHandler($code, $msg)
     {
         $this->errorMessage = preg_replace('{^(fopen|mkdir)\(.*?\): }', '', $msg);
-    }
-
-    /**
-     * @param string $stream
-     *
-     * @return null|string
-     */
-    private function getDirFromStream($stream)
-    {
-        $pos = strpos($stream, '://');
-        if ($pos === false) {
-            return dirname($stream);
-        }
-
-        if ('file://' === substr($stream, 0, 7)) {
-            return dirname(substr($stream, 7));
-        }
-
-        return;
-    }
-
-    /**
-     * @param $url
-     * @throws \Magento\Framework\Exception\LocalizedException
-     */
-    private function createDir($url)
-    {
-        if ($this->dirCreated) {
-            return;
-        }
-
-        $dir = $this->getDirFromStream($url);
-        if (null !== $dir && !is_dir($dir)) {
-            $this->errorMessage = null;
-            set_error_handler(array($this, 'customErrorHandler'));
-            $status = mkdir($dir, 0777, true);
-            restore_error_handler();
-            if (false === $status) {
-                throw new \Magento\Framework\Exception\LocalizedException(
-                    __('There is no existing directory at "%1" and its not buildable: %2', $dir, $this->errorMessage)
-                );
-            }
-        }
-        $this->dirCreated = true;
     }
 }

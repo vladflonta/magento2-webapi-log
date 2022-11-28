@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @package     VladFlonta\WebApiLog
+ * @author      Vlad Flonta
+ * @copyright   Copyright © 2022
+ * @license     https://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="webapi">
+            <group id="logger" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Web API Logger</label>
+                <field id="enable" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="save_path" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Save path</label>
+                    <comment><![CDATA[Path is relative to <em>var/log/</em>.]]></comment>
+                </field>
+                <field id="exclude_services" translate="label comment" type="multiselect" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Disable logging services</label>
+                    <source_model>VladFlonta\WebApiLog\Model\Config\Source\Services</source_model>
+                    <comment>Web API REST services which would not be logged.</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
