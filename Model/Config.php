@@ -32,7 +32,7 @@ class Config
     {
         return array_filter(explode(
             ',',
-            $this->scopeConfig->getValue(self::XML_PATH_WEBAPI_LOGGER.'exclude_services', 'store')
+            $this->scopeConfig->getValue(self::XML_PATH_WEBAPI_LOGGER.'exclude_services', 'store') ?? ''
         ));
     }
 
