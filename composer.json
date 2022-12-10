@@ -10,7 +10,7 @@
         "magento/module-webapi": ">=100.0.2"
     },
     "type": "magento2-module",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "license": "OSL-3.0",
     "autoload": {
         "files": [
