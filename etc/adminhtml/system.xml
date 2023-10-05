@@ -25,6 +25,11 @@
                     <source_model>VladFlonta\WebApiLog\Model\Config\Source\Services</source_model>
                     <comment>Web API REST services which would not be logged.</comment>
                 </field>
+                <field id="enable_integration_name" translate="label" type="select" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Record Integration Name</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>If the request is made via OAuth, record the name of the intregation the request is associated with.</comment>
+                </field>
             </group>
         </section>
     </system>
