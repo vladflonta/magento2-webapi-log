@@ -51,4 +51,12 @@ class Config
     {
         return (bool) $this->scopeConfig->getValue(self::XML_PATH_WEBAPI_LOGGER.'enable', 'store');
     }
+
+    /**
+     * @return boolean
+     */
+    public function isIntegrationNameEnabled()
+    {
+        return (bool)$this->scopeConfig->getValue(self::XML_PATH_WEBAPI_LOGGER.'enable_integration_name', 'store');
+    }
 }

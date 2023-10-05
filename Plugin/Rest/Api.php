@@ -8,6 +8,9 @@
 
 namespace VladFlonta\WebApiLog\Plugin\Rest;
 
+use Magento\Integration\Api\OauthServiceInterface;
+use Magento\Integration\Api\IntegrationServiceInterface;
+
 class Api
 {
     /** @var \VladFlonta\WebApiLog\Logger\Handler */
@@ -28,6 +31,12 @@ class Api
     /** @var \VladFlonta\WebApiLog\Model\Service\Resolver */
     protected $serviceResolver;
 
+    /** @var OauthServiceInterface */
+    protected $oauthService;
+
+    /** @var IntegrationServiceInterface */
+    protected $integrationService;
+
     /**
      * Rest constructor.
      * @param \Psr\Log\LoggerInterface $logger
@@ -41,13 +50,17 @@ class Api
         \VladFlonta\WebApiLog\Model\Config $config,
         \VladFlonta\WebApiLog\Logger\Handler $apiLogger,
         \Magento\Framework\App\RequestInterface $request,
-        \VladFlonta\WebApiLog\Model\Service\Resolver $serviceResolver
+        \VladFlonta\WebApiLog\Model\Service\Resolver $serviceResolver,
+        OauthServiceInterface $oauthServiceInterface,
+        IntegrationServiceInterface $integrationServiceInterface
     ) {
         $this->logger = $logger;
         $this->config = $config;
         $this->request = $request;
         $this->apiLogger = $apiLogger;
         $this->serviceResolver = $serviceResolver;
+        $this->oauthService = $oauthServiceInterface;
+        $this->integrationService = $integrationServiceInterface;
     }
 
     /**
@@ -90,7 +103,7 @@ class Api
                         if (count($info) !== 5) {
                             $currentRequest['headers'][$key] = 'SHA256:'.hash('sha256', $value);
                         } else {
-                            $currentRequest['headers'][$key] = $info['type'].' SHA256:'.hash('sha256', $info['data']);
+                            $currentRequest['headers'][$key] = $info['type'].$this->getIntegrationName($info).' SHA256:'.hash('sha256', $info['data']);
                         }
                         break;
                     default:
@@ -149,5 +162,43 @@ class Api
     protected function isAuthorizationRequest($path)
     {
         return preg_match('/integration\/(admin|customer)\/token/', $path) !== 0;
+    }
+
+    /**
+     * @param array<mixed> $requestHeader
+     * @return string
+     */
+    protected function getIntegrationName($requestHeader)
+    {
+        if(!$this->config->isIntegrationNameEnabled()){
+            return '';
+        }
+        if(!isset($requestHeader['data'])){
+            return '';
+        }
+        try{
+            $data = explode(',', $requestHeader['data']);
+            $data = array_map(function($keyValue){
+                list($key, $value) = explode('=', $keyValue);
+                return [
+                    'key' => $key,
+                    'value' => trim($value, '"')
+                ];
+            }, $data);
+            $data = array_combine(
+                array_column($data, 'key'),
+                array_column($data, 'value')
+            );
+            $consumerKey = $data['oauth_consumer_key'];
+            /** @var \Magento\Integration\Model\Oauth\Consumer $consumer */
+            $consumer = $this->oauthService->loadConsumerByKey($consumerKey);
+            /** @var \Magento\Integration\Model\Integration $integration */
+            $integration = $this->integrationService->findByConsumerId($consumer->getId());
+    
+            return ' ('.$integration->getName().')';
+        }catch(\Exception $e){
+            $this->logger->error($e->getMessage(), ['request_header' => $requestHeader]);
+            return '';
+        }
     }
 }
